@@ -47,6 +47,35 @@ namespace SeferKasaApi.Migrations
                     b.ToTable("Expenses");
                 });
 
+            modelBuilder.Entity("SeferKasaApi.Entities.Payment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("PaidDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PaymentMethod")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("TripId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TripId");
+
+                    b.ToTable("Payments");
+                });
+
             modelBuilder.Entity("SeferKasaApi.Entities.Trip", b =>
                 {
                     b.Property<int>("id")
@@ -90,9 +119,22 @@ namespace SeferKasaApi.Migrations
                     b.Navigation("Trip");
                 });
 
+            modelBuilder.Entity("SeferKasaApi.Entities.Payment", b =>
+                {
+                    b.HasOne("SeferKasaApi.Entities.Trip", "Trip")
+                        .WithMany("Payments")
+                        .HasForeignKey("TripId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Trip");
+                });
+
             modelBuilder.Entity("SeferKasaApi.Entities.Trip", b =>
                 {
                     b.Navigation("Expenses");
+
+                    b.Navigation("Payments");
                 });
 #pragma warning restore 612, 618
         }

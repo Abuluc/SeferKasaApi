@@ -11,4 +11,5 @@ public class Trip
     public decimal? CollectedAmount { get; set; }
     public string Status { get; set; } = "Planned";
     public List<Expense> Expenses { get; set; } = new();
+    public List<Payment> Payments { get; set; } = new();
 }

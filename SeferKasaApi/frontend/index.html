@@ -1,0 +1,274 @@
+﻿<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SeferKasaApi — Test Paneli</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            max-width: 960px;
+            margin: 24px auto;
+            padding: 0 16px;
+            background: #0f172a;
+            color: #e2e8f0;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            margin-bottom: 4px;
+        }
+
+        h2 {
+            font-size: 1.1rem;
+            margin-top: 0;
+            color: #38bdf8;
+        }
+
+        .card {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        @media (max-width: 720px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        label {
+            display: block;
+            font-size: 0.85rem;
+            margin: 8px 0 4px;
+            color: #94a3b8;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 8px 10px;
+            border-radius: 6px;
+            border: 1px solid #475569;
+            background: #0f172a;
+            color: #f8fafc;
+        }
+
+        button {
+            margin-top: 12px;
+            padding: 9px 14px;
+            border: none;
+            border-radius: 6px;
+            background: #2563eb;
+            color: #fff;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+            button:hover {
+                background: #1d4ed8;
+            }
+
+            button.secondary {
+                background: #334155;
+            }
+
+                button.secondary:hover {
+                    background: #475569;
+                }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 0.9rem;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 8px;
+            border-bottom: 1px solid #334155;
+        }
+
+        th {
+            color: #94a3b8;
+        }
+
+        pre {
+            background: #020617;
+            padding: 12px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 0.85rem;
+            color: #a7f3d0;
+        }
+
+        .status {
+            font-size: 0.85rem;
+            margin-top: 8px;
+            color: #fbbf24;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>🚚 SeferKasaApi Test Paneli</h1>
+    <div class="card">
+        <label for="apiUrl">API Adresi (dotnet run çıktısındaki http/https adresini yaz)</label>
+        <input id="apiUrl" value="http://localhost:7082" />
+    </div>
+
+    <div class="grid">
+        <!-- Yeni Sefer Ekle -->
+        <div class="card">
+            <h2>1. Yeni Sefer Oluştur</h2>
+            <label>Sefer Başlığı</label>
+            <input id="tripTitle" placeholder="Örn: Ankara - İstanbul Seferi" />
+            <label>Başlangıç Tarihi</label>
+            <input id="tripStart" type="datetime-local" />
+            <label>Anlaşılan Tutar (TL)</label>
+            <input id="tripAmount" type="number" step="0.01" placeholder="15000" />
+            <button onclick="createTrip()">Sefer Ekle</button>
+        </div>
+
+        <!-- Yeni Masraf Ekle -->
+        <div class="card">
+            <h2>2. Yeni Masraf Ekle</h2>
+            <label>Sefer ID (Genel masraf için boş bırak)</label>
+            <input id="expTripId" type="number" placeholder="1" />
+            <label>Kategori</label>
+            <select id="expCategory">
+                <option value="Fuel">Fuel (Yakıt)</option>
+                <option value="Maintenance">Maintenance (Bakım)</option>
+                <option value="Toll">Toll (Köprü / Otoyol)</option>
+                <option value="Food">Food (Yemek)</option>
+                <option value="Other">Other (Diğer)</option>
+            </select>
+            <label>Tutar (TL)</label>
+            <input id="expAmount" type="number" step="0.01" placeholder="1850.50" />
+            <label>Not</label>
+            <input id="expNote" placeholder="Mazot alımı" />
+            <button onclick="createExpense()">Masraf Ekle</button>
+        </div>
+    </div>
+
+    <!-- Sefer Listesi ve Özet -->
+    <div class="card">
+        <h2>3. Seferler ve Finansal Özet</h2>
+        <button class="secondary" onclick="loadTrips()">Seferleri Yenile</button>
+        <button class="secondary" onclick="loadExpenseSummary()">Genel Masraf Özeti</button>
+        <div id="statusMsg" class="status"></div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Başlık</th>
+                    <th>Anlaşılan</th>
+                    <th>Durum</th>
+                    <th>İşlem</th>
+                </tr>
+            </thead>
+            <tbody id="tripsBody"></tbody>
+        </table>
+
+        <label style="margin-top:14px;">API Yanıtı / Özet Çıktısı</label>
+        <pre id="output">Henüz işlem yapılmadı...</pre>
+    </div>
+
+    <script>
+    // Varsayılan tarih alanını doldur
+    document.getElementById("tripStart").value = new Date().toISOString().slice(0, 16);
+
+    function baseUrl() {
+      return document.getElementById("apiUrl").value.replace(/\/$/, "");
+    }
+
+    function showOutput(data, msg = "") {
+      document.getElementById("output").textContent = JSON.stringify(data, null, 2);
+      document.getElementById("statusMsg").textContent = msg;
+    }
+
+    async function createTrip() {
+      const payload = {
+        title: document.getElementById("tripTitle").value,
+        startDate: new Date(document.getElementById("tripStart").value).toISOString(),
+        endDate: null,
+        agreedAmount: parseFloat(document.getElementById("tripAmount").value || "0")
+      };
+
+      const res = await fetch(`${baseUrl()}/api/trips`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      showOutput(data, res.ok ? "Sefer eklendi!" : "Hata oluştu.");
+      if (res.ok) loadTrips();
+    }
+
+    async function createExpense() {
+      const rawTripId = document.getElementById("expTripId").value.trim();
+      const payload = {
+        tripId: rawTripId === "" ? null : parseInt(rawTripId, 10),
+        category: document.getElementById("expCategory").value,
+        amount: parseFloat(document.getElementById("expAmount").value || "0"),
+        expenseDate: new Date().toISOString(),
+        note: document.getElementById("expNote").value
+      };
+
+      const res = await fetch(`${baseUrl()}/api/expenses`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      showOutput(data, res.ok ? "Masraf eklendi!" : "Hata oluştu.");
+      if (res.ok) loadTrips();
+    }
+
+    async function loadTrips() {
+      const res = await fetch(`${baseUrl()}/api/trips`);
+      const trips = await res.json();
+      const tbody = document.getElementById("tripsBody");
+      tbody.innerHTML = "";
+
+      trips.forEach(t => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${t.id}</td>
+          <td>${t.title}</td>
+          <td>${t.agreedAmount} TL</td>
+          <td>${t.status}</td>
+          <td><button class="secondary" style="margin:0;padding:5px 10px;" onclick="loadTripSummary(${t.id})">Özeti Gör</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
+      showOutput(trips, "Seferler listelendi.");
+    }
+
+    async function loadTripSummary(id) {
+      const res = await fetch(`${baseUrl()}/api/trips/${id}/summary`);
+      const data = await res.json();
+      showOutput(data, `Sefer #${id} finansal özeti yüklendi.`);
+    }
+
+    async function loadExpenseSummary() {
+      const res = await fetch(`${baseUrl()}/api/expenses/summary`);
+      const data = await res.json();
+      showOutput(data, "Genel masraf özeti yüklendi.");
+    }
+    </script>
+</body>
+</html>
